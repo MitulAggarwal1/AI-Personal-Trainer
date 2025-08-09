@@ -4,9 +4,10 @@ import numpy as np
 import cv2
 import mediapipe as mp
 import time
-import pyttsx3
 import re
-
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import LabelEncoder
 
 # ============================
 # 1. HARD-CODED PLANS DICTIONARY
@@ -117,37 +118,106 @@ plans = {
 # ============================
 
 
-def select_plan_key(severity, duration, pain_type, location, activity, can_walk, history, improving):
+def select_plan_key(severity, duration, pain_type, location,
+                    activity, can_walk, history, improving):
+
+
+    # normalize text inputs
     sev = severity.lower()
     loc = location.lower()
+    ptype = pain_type.lower()
+    act = activity.lower()
+    walk_flag = 1 if can_walk else 0
+    hist_flag = 1 if history else 0
+    imp_flag  = 1 if improving else 0
 
+    # 1) define your labelled examples
+    #    each row: [severity, duration, pain_type, location, activity, can_walk, history, improving, plan_key]
+    data = [
+        # LEG
+        ['mild',      2,  'dull',      'leg',      'active',    1, 0, 1, 'plan_leg_gentle'],
+        ['mild',     15,  'dull',      'leg',      'sedentary', 1, 1, 0, 'plan_leg_gentle'],
+        ['mild',      5,  'sharp',     'leg',      'active',    0, 0, 1, 'plan_rest_doctor'],
+        ['moderate',  3,  'radiating', 'leg',      'active',    1, 0, 1, 'plan_leg_gentle'],
+        ['moderate', 10,  'dull',      'leg',      'sedentary', 1, 0, 1, 'plan_leg_strengthen'],
+        ['moderate',  7,  'sharp',     'leg',      'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['severe',    1,  'sharp',     'leg',      'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['severe',   12,  'radiating', 'leg',      'sedentary', 0, 1, 0, 'plan_rest_doctor'],
 
-    if sev == "severe":
-        return 'plan_rest_doctor'
+        # HIP
+        ['mild',      5,  'dull',      'hip',      'active',    1, 0, 1, 'plan_hip_gentle'],
+        ['mild',     20,  'dull',      'hip',      'sedentary', 1, 1, 0, 'plan_hip_gentle'],
+        ['moderate',  2,  'radiating', 'hip',      'active',    1, 0, 1, 'plan_hip_gentle'],
+        ['moderate', 15,  'dull',      'hip',      'active',    1, 0, 1, 'plan_hip_strengthen'],
+        ['moderate',  7,  'sharp',     'hip',      'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['severe',    1,  'sharp',     'hip',      'sedentary', 0, 1, 0, 'plan_rest_doctor'],
+        ['severe',   14,  'dull',      'hip',      'active',    1, 0, 0, 'plan_rest_doctor'],
 
+        # LOWER BACK
+        ['mild',      3,  'dull',       'lower back',  'active',    1, 0, 1, 'plan_lower_back_gentle'],
+        ['mild',     12,  'sharp',      'lower back',  'sedentary', 0, 0, 1, 'plan_rest_doctor'],
+        ['moderate',  5,  'radiating',  'lower back',  'active',    1, 0, 1, 'plan_lower_back_gentle'],
+        ['moderate', 15,  'dull',       'lower back',  'sedentary', 1, 0, 1, 'plan_lower_back_strengthen'],
+        ['moderate', 10,  'sharp',      'lower back',  'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['severe',    2,  'sharp',      'lower back',  'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['severe',   20,  'radiating',  'lower back',  'sedentary', 0, 1, 0, 'plan_rest_doctor'],
 
-    if loc == 'shoulder':
-        return 'plan_shoulder_gentle' if sev == "mild" else 'plan_shoulder_strengthen'
-    if loc == 'lower back':
-        return 'plan_lower_back_gentle' if sev == "mild" else 'plan_lower_back_strengthen'
-    if loc == 'hip':
-        return 'plan_hip_gentle' if sev == "mild" else 'plan_hip_strengthen'
-    if loc == 'leg':
-        return 'plan_leg_gentle' if sev == "mild" else 'plan_leg_strengthen'
-    if loc == 'arm':
-        return 'plan_arm_gentle' if sev == "mild" else 'plan_arm_strengthen'
+        # SHOULDER
+        ['mild',      4,  'dull',      'shoulder', 'active',    1, 0, 1, 'plan_shoulder_gentle'],
+        ['mild',     18,  'radiating', 'shoulder', 'sedentary', 1, 1, 0, 'plan_shoulder_gentle'],
+        ['moderate',  3,  'dull',      'shoulder', 'active',    1, 0, 1, 'plan_shoulder_strengthen'],
+        ['moderate',  8,  'sharp',     'shoulder', 'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['moderate', 12,  'radiating', 'shoulder', 'sedentary', 1, 1, 0, 'plan_shoulder_gentle'],
+        ['severe',    1,  'sharp',     'shoulder', 'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['severe',   20,  'dull',      'shoulder', 'active',    1, 0, 0, 'plan_rest_doctor'],
 
+        # ARM
+        ['mild',      2,  'dull',      'arm',      'active',    1, 0, 1, 'plan_arm_gentle'],
+        ['mild',     10,  'sharp',     'arm',      'sedentary', 0, 0, 1, 'plan_rest_doctor'],
+        ['moderate',  5,  'dull',      'arm',      'active',    1, 0, 1, 'plan_arm_strengthen'],
+        ['moderate',  8,  'sharp',     'arm',      'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['moderate', 14,  'radiating', 'arm',      'sedentary', 1, 1, 0, 'plan_arm_gentle'],
+        ['severe',    3,  'sharp',     'arm',      'active',    0, 0, 0, 'plan_rest_doctor'],
+        ['severe',   20,  'dull',      'arm',      'sedentary', 0, 1, 0, 'plan_rest_doctor'],
+    ]
 
-    return 'plan_rest_doctor'
+    # 2) split into features & labels
+    X_raw = [row[:-1] for row in data]
+    y      = [row[-1]   for row in data]
+
+    # 3) prepare encoders for categorical columns
+    cat_idxs = [0, 2, 3, 4]  # severity, pain_type, location, activity
+    encoders = [LabelEncoder() for _ in cat_idxs]
+    for enc, idx in zip(encoders, cat_idxs):
+        enc.fit([r[idx] for r in X_raw])
+
+    # 4) build numeric feature matrix
+    X = []
+    for r in X_raw:
+        nr = list(r)
+        for enc, idx in zip(encoders, cat_idxs):
+            nr[idx] = enc.transform([nr[idx]])[0]
+        X.append(nr)
+    X = np.array(X)
+
+    # 5) train decision tree
+    clf = DecisionTreeClassifier(random_state=42)
+    clf.fit(X, y)
+
+    # 6) assemble and encode the single query
+    query = [sev, duration, ptype, loc, act, walk_flag, hist_flag, imp_flag]
+    q_enc = list(query)
+    for enc, idx in zip(encoders, cat_idxs):
+        q_enc[idx] = enc.transform([q_enc[idx]])[0]
+
+    # 7) predict and return the plan key
+    return clf.predict([q_enc])[0]
 
 
 # ============================
 # 3. BACKEND CONFIG 
 # ============================
 
-
-engine = pyttsx3.init()
-engine.setProperty('rate', 150)
 
 
 SQUAT_DEPTH_TRIGGER = 85
@@ -861,9 +931,7 @@ class RecoveryApp:
 
 
     def start_tracking_and_close(self, name, sets, reps):
-        """
-        Close the plan generator window and start the exercise session.
-        """
+        
         
         self.master.destroy()
 
@@ -881,6 +949,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = RecoveryApp(root)
     root.mainloop()
-
-
-
