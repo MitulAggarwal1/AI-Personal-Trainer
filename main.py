@@ -241,6 +241,19 @@ def estimate_orientation(landmarks):
     z_diff = abs(ls.z - rs.z)
     return "front" if z_diff < 0.15 else "side"
 
+def show_break_timer(duration):
+    start_time = time.time()
+    while time.time() - start_time < duration:
+        remaining = duration - int(time.time() - start_time)
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(frame, f"Break Time: {remaining}s", (150, 240),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3)
+        cv2.imshow("Break", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyWindow("Break")
+
+
 # ============================
 # 6. METRIC EXTRACTION
 # ============================
@@ -344,57 +357,73 @@ def detect_faults(exercise, m, profile, phase):
     faults = []
 
     if exercise in ["squat", "goblet squat"]:
-        if m.get("back_angle", 180) < 110:
+        back_angle = m.get("back_angle", 90)
+        knee_angle = m.get("knee_angle", 180)
+        torso_angle = m.get("torso_angle", 0)
+
+        if back_angle < 35:
             faults.append(("Back rounding - keep spine neutral", "critical"))
-        elif m.get("back_angle", 180) < 130:
+        elif back_angle < 60:
             faults.append(("Slight back lean - engage core", "moderate"))
-        if m.get("knee_angle", 180) > 105 and phase == "down":
+
+        if knee_angle > 110 and phase == "down":
             faults.append(("Squat deeper - aim for thighs parallel", "moderate"))
-        if m.get("torso_angle", 0) > 50:
+
+        if torso_angle > 55:
             faults.append(("Torso leaning forward", "moderate"))
 
     elif exercise == "deadlift":
-        if m.get("back_angle", 180) < 120:
+        back_angle = m.get("back_angle", 90)
+        torso_angle = m.get("torso_angle", 0)
+
+        if back_angle < 35:
             faults.append(("Back rounding - hinge at hips", "critical"))
-        if m.get("torso_angle", 0) > 70:
+        elif back_angle < 60:
+            faults.append(("Slight back lean", "moderate"))
+
+        if torso_angle > 75:
             faults.append(("Torso too low - bend knees", "moderate"))
 
     elif exercise in ["pushup", "incline pushup"]:
-        if m.get("elbow_angle", 180) > 155:
+        elbow_angle = m.get("elbow_angle", 180)
+        back_angle = m.get("back_angle", 90)
+
+        if elbow_angle > 160:
             faults.append(("Bend elbows more during descent", "moderate"))
-        if m.get("back_angle", 180) < 145:
+        if back_angle < 50:  # was 60
             faults.append(("Hips sagging - keep core tight", "critical"))
 
     elif exercise == "bicep curl":
-        if m.get("elbow_angle", 180) > 160:
+        if m.get("elbow_angle", 180) > 165:
             faults.append(("Not curling enough - full range", "moderate"))
 
     elif exercise == "shoulder press":
-        if m.get("arm_verticality", 100) < 65:
+        if m.get("arm_verticality", 90) < 55:  # was 60
             faults.append(("Press arms fully overhead", "moderate"))
 
     elif exercise == "dumbbell row":
-        if m.get("row_angle", 0) < 70:
+        if m.get("row_angle", 90) < 55:  # was 60
             faults.append(("Pull elbow higher - close to torso", "moderate"))
-        if m.get("back_angle", 180) < 140:
+        if m.get("back_angle", 90) < 35:  # was 50
             faults.append(("Back rounding - keep flat", "critical"))
 
     elif exercise in ["lunge", "step-ups"]:
-        if m.get("front_knee_angle", 180) > 110:
+        if m.get("front_knee_angle", 180) > 115:  # was 110
             faults.append(("Step deeper - bend front knee more", "moderate"))
 
     elif exercise == "glute bridge":
-        if m.get("hip_extension", 0) < 150:
+        if m.get("hip_extension", 90) < 55:  # was 60
             faults.append(("Lift hips higher", "moderate"))
 
     elif exercise == "plank":
-        if m.get("body_line", 180) < 165:
+        if m.get("body_line", 90) < 55:  # was 60
             faults.append(("Sagging hips - engage core", "critical"))
 
     elif exercise == "bird-dog":
-        if m.get("spine_alignment", 180) < 150:
+        if m.get("spine_alignment", 90) < 55:  # was 60
             faults.append(("Back not stable - avoid sag", "moderate"))
 
+    # Stretches
     elif exercise == "hamstring stretch":
         if m.get("leg_straightness", 180) < 165:
             faults.append(("Straighten knee more", "moderate"))
@@ -402,36 +431,38 @@ def detect_faults(exercise, m, profile, phase):
             faults.append(("Hinge further at hips", "moderate"))
 
     elif exercise == "quad stretch":
-        if m.get("heel_to_glute", 180) > 70:
+        if m.get("heel_to_glute", 180) > 75:
             faults.append(("Pull ankle closer to glute", "moderate"))
 
     elif exercise == "shoulder stretch":
-        if m.get("arm_across_chest", 180) > 95:
+        if m.get("arm_across_chest", 180) > 100:
             faults.append(("Bring arm further across chest", "mild"))
 
     elif exercise == "triceps stretch":
-        if m.get("elbow_overhead", 100) < 25:
+        if m.get("elbow_overhead", 100) < 20:
             faults.append(("Raise elbow higher", "moderate"))
 
     elif exercise == "hip flexor stretch":
-        if m.get("front_leg_angle", 180) < 95:
+        if m.get("front_leg_angle", 180) < 90:
             faults.append(("Bend front knee more", "moderate"))
-        if m.get("torso_upright", 100) < 40:
+        if m.get("torso_upright", 100) < 35:
             faults.append(("Keep torso upright", "mild"))
 
     elif exercise == "cat-cow stretch":
-        if m.get("spine_curve", 180) > 160:
+        if m.get("spine_curve", 180) > 165:
             faults.append(("Round spine more in cat position", "mild"))
 
     elif exercise == "childs pose":
-        if m.get("torso_lowering", 100) < 30:
+        if m.get("torso_lowering", 100) < 25:
             faults.append(("Reach arms further forward", "mild"))
 
     elif exercise == "figure-4 stretch":
-        if m.get("hip_opening", 180) < 90:
+        if m.get("hip_opening", 180) < 85:
             faults.append(("Pull ankle closer to open hip", "moderate"))
 
     return faults
+
+
 
 # ============================
 # 8. FORM SCORE – all exercises
