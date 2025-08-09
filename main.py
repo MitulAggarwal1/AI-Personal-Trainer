@@ -9,7 +9,7 @@ import re
 
 
 # ============================
-# 1. HARD-CODED PLANS DICTIONARY (standardized format)
+# 1. HARD-CODED PLANS DICTIONARY
 # ============================
 
 
@@ -142,7 +142,7 @@ def select_plan_key(severity, duration, pain_type, location, activity, can_walk,
 
 
 # ============================
-# 3. BACKEND CONFIG (shortened for space — keep your full implementations)
+# 3. BACKEND CONFIG 
 # ============================
 
 
@@ -337,7 +337,7 @@ def extract_pose_metrics(exercise, lm):
     return m
 
 # ============================
-# 7. FAULT DETECTION – all exercises covered
+# 7. FAULT DETECTION
 # ============================
 
 def detect_faults(exercise, m, profile, phase):
@@ -515,7 +515,7 @@ def show_instruction_popup(exercise):
     else:
         instructions = "Follow safe form and perform the exercise carefully."
 
-    # Create a popup window that blocks until the user clicks Start
+    
     popup = tk.Tk()
     popup.title(f"Instructions: {exercise.capitalize()}")
     popup.geometry("450x200")
@@ -532,17 +532,17 @@ def show_instruction_popup(exercise):
     popup.mainloop()
 
 # ============================
-# 9. RUN EXERCISE SESSION – all exercises
+# 9. RUN EXERCISE SESSION
 # ============================
 
 def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
     DEPTH_TARGET = TARGET_DEPTH_LIMIT if "ACL" in "".join([]).upper() else SQUAT_DEPTH_TRIGGER
     set_count = 0
 
-    # Show instructions before tracking
+    
     show_instruction_popup(exercise)
 
-    # Define stretch exercises for hold tracking
+    
     stretch_exercises = {
         "hamstring stretch", "quad stretch", "shoulder stretch", "triceps stretch",
         "hip flexor stretch", "cat-cow stretch", "childs pose", "figure-4 stretch", "plank"
@@ -638,7 +638,7 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
                         rep_started = False
 
                 elif exercise in ["lunge", "step-ups", "glute bridge", "bird-dog"]:
-                    # For simplicity, no phase, count each visible extension/flexion
+                    
                     rep += 1
                     phase = "hold"
 
@@ -738,7 +738,7 @@ class RecoveryApp:
         master.grid_columnconfigure(1, weight=1)
 
 
-        # Scrollable container for exercises
+        
         container = tk.Frame(master)
         container.grid(row=row + 2, column=0, columnspan=2, sticky='nsew')
         master.grid_rowconfigure(row + 2, weight=1)
@@ -783,7 +783,7 @@ class RecoveryApp:
             generated_workout = []
 
 
-            # Parse easy standardized "exercise setsxreps"
+       
             for line in plan_text.splitlines():
                 line = line.strip().lower()
                 if not line or len(line) < 4:
@@ -806,22 +806,22 @@ class RecoveryApp:
 
 
     def show_exercise_selection(self):
-        # Clear any existing widgets in the scrollable frame
+        
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
-        # Add label
+        
         tk.Label(
             self.scrollable_frame,
             text="Choose exercise to start:",
             font=('Arial', 12, 'bold')
         ).pack(anchor="w", pady=(10, 5))
 
-        # Add buttons for each generated exercise
+        
         for name, sets, reps in generated_workout:
             btn_text = f"{name.capitalize()} ({sets}x{reps})"
 
-            # Each button calls a small helper that closes the UI and starts tracking
+            
             tk.Button(
                 self.scrollable_frame,
                 text=btn_text,
@@ -833,10 +833,10 @@ class RecoveryApp:
         """
         Close the plan generator window and start the exercise session.
         """
-        # Destroy the Tkinter main window (Plan Generator UI)
+        
         self.master.destroy()
 
-        # Start the OpenCV/MediaPipe tracking session
+        
         run_exercise_session(name, sets, reps)
 
 
