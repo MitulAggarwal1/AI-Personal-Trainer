@@ -1,54 +1,68 @@
-AI Recovery Exercise & Rehabilitation Assistant
+# AI Recovery Exercise & Rehabilitation Assistant
 
 A computer vision-powered fitness and rehabilitation assistant using pose estimation and machine learning to create personalised recovery plans, analyse exercise form, and provide real-time feedback through a desktop app.
 
-Features
+## Features
 
-- Personalized recovery plans: Generates a recovery or workout plan from user input using a decision tree classifier.
-- Webcam-based exercise tracking: Uses MediaPipe AI pose estimation to analyze user movement and posture in real time.
+- Personalised recovery plans: Generates a recovery or workout plan from user input using a decision tree classifier.
+- Webcam-based exercise tracking: Uses MediaPipe AI pose estimation to analyse user movement and posture in real time.
 - Form feedback and rep counting: Automatically detects reps/holds and provides suggestions on exercise form.
 - Tkinter GUI: User-friendly interface for injury input, plan review, and exercise session control.
 - Custom fault detection and scoring: Applies biomechanical rules to give tailored feedback on movement quality.
 
-Setup Instructions
+## Prerequisites
 
-Prerequisites
-
-- Python 3.10+ (recommended for package compatibility)
+- **Python 3.10 or 3.11 (64-bit)** is required for package compatibility, especially with MediaPipe. Python 3.12 or newer is not currently supported.
 - A working webcam
 - pip (Python package installer)
 
-Clone the repo
+## Setup Instructions
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/MitulAggarwal1/KI-Challenge.git
 cd KI-Challenge
 ```
 
-Create and activate a virtual environment (Windows)
+### 2. Install Python 3.10 or 3.11
+
+Download and install Python 3.10 or 3.11 from the official site: https://www.python.org/downloads/windows/
+
+Make sure to check **Add Python to PATH** during installation.
+
+### 3. Create and activate a virtual environment with the correct Python version
+
+On Windows PowerShell:
 
 ```bash
-python -m venv venv
-venv\Scripts\Activate.ps1     Or: venv\Scripts\activate.bat in CMD
+py -3.11 -m venv venv
+.\venv\Scripts\Activate.ps1
 ```
 
-(Mac/Linux users: `source venv/bin/activate`)
+*If the `py -3.11` command fails, specify the full path to the Python 3.11 executable.*
 
-Install dependencies
+On Mac/Linux:
 
 ```bash
+python3.11 -m venv venv
+source venv/bin/activate
+```
+
+### 4. Install dependencies
+
+```bash
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
-Note for Windows users:
-If you encounter build errors during pip install, please install the Microsoft C++ Build Tools with the "Desktop development with C++" workload selected. Restart your terminal afterwards and retry the install. This is required for building some Python packages with native code extensions.
 
-Required file
+If you encounter build errors on Windows, install the Microsoft C++ Build Tools with the "Desktop development with C++" workload and restart your terminal before retrying the installation.
 
-- The model file `movenet_thunder.tflite` must be present in the project root directory. This file is used for pose estimation AI.
+### 5. Required files
 
+Make sure `movenet_thunder.tflite` (the pose estimation model) is in the project root directory.
 
-
-Running the App
+## Running the App
 
 ```bash
 python main.py
@@ -58,34 +72,25 @@ python main.py
 - Review the recommended plan.
 - Select an exercise to begin real-time tracking and feedback.
 
+## Troubleshooting
 
+- If you see errors about missing modules, ensure your virtual environment is activated and run `pip install -r requirements.txt` again.
+- If the webcam does not work, ensure it is not being used by another application.
+- If you encounter errors installing MediaPipe, verify you are running Python 3.10 or 3.11.
 
-Troubleshooting
-
-If you see errors about missing modules, ensure your virtual environment is activated and run `pip install -r requirements.txt` again.
-
-If the webcam does not work, make sure it is not being used by another application.
-
-
-
-Project Structure
+## Project Structure
 
 - `main.py` – Main app logic and GUI  
-- `requirements.txt` – Python packages
-- `movenet_thunder.tflite` – AI pose estimation model file
+- `requirements.txt` – Python packages  
+- `movenet_thunder.tflite` – AI pose estimation model file  
 - `.gitignore` – Virtual environment and OS file exclusions
 
+## Acknowledgments
 
-
-Acknowledgments
-
-- [MediaPipe](https://mediapipe.dev/) for pose estimation
-- scikit-learn for the machine learning plan classifier
+- [MediaPipe](https://mediapipe.dev/) for pose estimation  
+- scikit-learn for machine learning plan classifier  
 - OpenCV for video processing
 
-
-
-License
+## License
 
 This project is submitted as part of the MIT Maker Portfolio. Please contact the author for reuse or collaboration.
-
