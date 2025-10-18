@@ -39,6 +39,8 @@ Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
+Note for Windows users:
+If you encounter build errors during pip install, please install the Microsoft C++ Build Tools with the "Desktop development with C++" workload selected. Restart your terminal afterwards and retry the install. This is required for building some Python packages with native code extensions.
 
 Required file
 
