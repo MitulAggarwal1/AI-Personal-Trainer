@@ -58,9 +58,6 @@ pip install -r requirements.txt
 
 If you encounter build errors on Windows, install the Microsoft C++ Build Tools with the "Desktop development with C++" workload and restart your terminal before retrying the installation.
 
-### 5. Required files
-
-Make sure `movenet_thunder.tflite` (the pose estimation model) is in the project root directory.
 
 ## Running the App
 
@@ -82,7 +79,6 @@ python main.py
 
 - `main.py` – Main app logic and GUI  
 - `requirements.txt` – Python packages  
-- `movenet_thunder.tflite` – AI pose estimation model file  
 - `.gitignore` – Virtual environment and OS file exclusions
 
 ## Acknowledgments
