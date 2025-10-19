@@ -93,4 +93,4 @@ python main.py
 
 ## License
 
-This project is submitted as part of the MIT Maker Portfolio. Please contact the author for reuse or collaboration.
+Please contact the author for reuse or collaboration.
