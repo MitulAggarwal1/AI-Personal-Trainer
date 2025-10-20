@@ -9,6 +9,7 @@ A computer vision-powered fitness and rehabilitation assistant using pose estima
 - Form feedback and rep counting: Automatically detects reps/holds and provides suggestions on exercise form.
 - Tkinter GUI: User-friendly interface for injury input, plan review, and exercise session control.
 - Custom fault detection and scoring: Applies biomechanical rules to give tailored feedback on movement quality.
+- main.py and version10 are the same, latest version
 
 ## Prerequisites
 
