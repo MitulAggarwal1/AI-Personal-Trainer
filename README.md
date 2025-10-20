@@ -60,7 +60,7 @@ If you encounter build errors on Windows, install the Microsoft C++ Build Tools 
 
 ### 5. Required files
 
-Make sure `movenet_thunder.tflite` (the pose estimation model) is in the project root directory. This is for the earlier versions that require this file. The latest version does not require this file..
+Make sure `movenet_thunder.tflite` (the pose estimation model) is in the project root directory. This is for the earlier versions that require this file. The latest version does not require this file.
 
 ## Running the App
 
