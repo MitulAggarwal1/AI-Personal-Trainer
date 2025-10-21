@@ -553,6 +553,19 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
 
     show_instruction_popup(exercise)
 
+    USE_SMOOTHING = True
+    SMOOTH_ALPHA = 0.2
+
+    stretch_exercises = {
+        "hamstring stretch", "quad stretch", "shoulder stretch", "triceps stretch",
+        "hip flexor stretch", "cat-cow stretch", "childs pose", "figure-4 stretch", "plank"
+    }
+
+    knee_smooth = None
+    elbow_smooth = None
+    arm_vert_smooth = None
+    row_ang_smooth = None
+
     while set_count < sets:
         rep = 0
         rep_started = False
@@ -562,7 +575,7 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
         pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
         cap = cv2.VideoCapture(0)
 
-        for _ in range(5): cap.read()  # Warmup frames
+        for _ in range(5): cap.read()
 
         while cap.isOpened():
             success, frame = cap.read()
@@ -594,18 +607,82 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
 
                 m = extract_pose_metrics(exercise, lm)
 
-                # Phase and rep logic (simplified)
-                if exercise in rep_definitions:
-                    metric_key, start_cond, end_cond = rep_definitions[exercise]
-                    val = m.get(metric_key, 180)
-                    phase = "down" if start_cond(val) else "up"
-                    frame_buffer.append(val)
+                # Apply smoothing per angle used
+                if exercise in ["squat", "goblet squat", "deadlift"]:
+                    knee_ang = m.get("knee_angle", 180)
+                    if USE_SMOOTHING:
+                        knee_smooth = knee_ang if knee_smooth is None or np.isnan(knee_smooth) else SMOOTH_ALPHA * knee_ang + (1 - SMOOTH_ALPHA) * knee_smooth
+                        knee_to_use = knee_smooth
+                    else:
+                        knee_to_use = knee_ang
+                    phase = "down" if knee_to_use < 100 else "up"
+                    frame_buffer.append(knee_to_use)
                     smoothed = np.mean(frame_buffer[-5:])
-                    if not rep_started and start_cond(smoothed):
+                    if not rep_started and smoothed < DEPTH_TARGET:
                         rep_started = True
-                    elif rep_started and end_cond(smoothed):
+                    elif rep_started and smoothed > COMPLETION_TRIGGER:
                         rep += 1
                         rep_started = False
+
+                elif exercise in ["pushup", "incline pushup"]:
+                    elbow_ang = m.get("elbow_angle", 180)
+                    if USE_SMOOTHING:
+                        elbow_smooth = elbow_ang if elbow_smooth is None or np.isnan(elbow_smooth) else SMOOTH_ALPHA * elbow_ang + (1 - SMOOTH_ALPHA) * elbow_smooth
+                        elbow_to_use = elbow_smooth
+                    else:
+                        elbow_to_use = elbow_ang
+                    phase = "down" if elbow_to_use < 90 else "up"
+                    if not rep_started and elbow_to_use < 90:
+                        rep_started = True
+                    elif rep_started and elbow_to_use > 160:
+                        rep += 1
+                        rep_started = False
+
+                elif exercise == "bicep curl":
+                    elbow_ang = m.get("elbow_angle", 180)
+                    if USE_SMOOTHING:
+                        elbow_smooth = elbow_ang if elbow_smooth is None or np.isnan(elbow_smooth) else SMOOTH_ALPHA * elbow_ang + (1 - SMOOTH_ALPHA) * elbow_smooth
+                        elbow_to_use = elbow_smooth
+                    else:
+                        elbow_to_use = elbow_ang
+                    phase = "curl" if elbow_to_use < 90 else "extend"
+                    if not rep_started and elbow_to_use < 90:
+                        rep_started = True
+                    elif rep_started and elbow_to_use > 160:
+                        rep += 1
+                        rep_started = False
+
+                elif exercise == "shoulder press":
+                    arm_vert = m.get("arm_verticality", 90)
+                    if USE_SMOOTHING:
+                        arm_vert_smooth = arm_vert if arm_vert_smooth is None or np.isnan(arm_vert_smooth) else SMOOTH_ALPHA * arm_vert + (1 - SMOOTH_ALPHA) * arm_vert_smooth
+                        arm_vert_to_use = arm_vert_smooth
+                    else:
+                        arm_vert_to_use = arm_vert
+                    phase = "press" if arm_vert_to_use < 60 else "rest"
+                    if not rep_started and arm_vert_to_use < 60:
+                        rep_started = True
+                    elif rep_started and arm_vert_to_use > 80:
+                        rep += 1
+                        rep_started = False
+
+                elif exercise == "dumbbell row":
+                    row_ang = m.get("row_angle", 90)
+                    if USE_SMOOTHING:
+                        row_ang_smooth = row_ang if row_ang_smooth is None or np.isnan(row_ang_smooth) else SMOOTH_ALPHA * row_ang + (1 - SMOOTH_ALPHA) * row_ang_smooth
+                        row_ang_to_use = row_ang_smooth
+                    else:
+                        row_ang_to_use = row_ang
+                    phase = "pull" if row_ang_to_use < 60 else "lower"
+                    if not rep_started and row_ang_to_use < 60:
+                        rep_started = True
+                    elif rep_started and row_ang_to_use > 80:
+                        rep += 1
+                        rep_started = False
+
+                elif exercise in ["lunge", "step-ups", "glute bridge", "bird-dog"]:
+                    rep += 1
+                    phase = "hold"
 
                 elif exercise in stretch_exercises:
                     phase = "hold"
@@ -619,10 +696,6 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
                             rep += 1
                             stretch_hold_start = None
 
-                else:
-                    phase = "hold"
-                    rep += 1
-
                 faults = detect_faults(exercise, m, {}, phase)
                 score = calculate_form_score(exercise, m)
 
@@ -630,16 +703,19 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
                 if faults:
                     for i, (fault, sev) in enumerate(faults):
                         cv2.putText(portrait, fault, (30, 210 + i*20),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color_map.get(sev, (255,255,255)), 2)
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color_map.get(sev, (255, 255, 255)), 2)
                 else:
                     cv2.putText(portrait, "Good form! Keep going!", (30, 210),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
                 cv2.putText(portrait, f"Form Score: {score}/100", (30, 180),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0) if score >= 80 else (0,0,255), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0) if score >= 80 else (0, 0, 255), 2)
+
+            else:
+                phase = "unknown"
 
             cv2.putText(portrait, f"{exercise.capitalize()} Set {set_count+1}/{sets} Rep/Hold: {rep}/{reps_per_set}",
-                        (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,255), 2)
+                        (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
             cv2.imshow("AI Trainer", portrait)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):

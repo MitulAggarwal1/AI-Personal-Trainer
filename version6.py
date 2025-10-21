@@ -548,12 +548,17 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
         "hip flexor stretch", "cat-cow stretch", "childs pose", "figure-4 stretch", "plank"
     }
 
+    USE_SMOOTHING = True
+    SMOOTH_ALPHA = 0.2  # smoothing factor between 0 and 1
+    
     while set_count < sets:
         rep = 0
         rep_started = False
         frame_buffer = []
         stretch_hold_start = None
 
+        knee_smooth = None  # Initialize smoothed knee angle
+        
         pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
         cap = cv2.VideoCapture(0)
 
@@ -592,8 +597,19 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
                 # ===== Phase and rep logic =====
                 if exercise in ["squat", "goblet squat", "deadlift"]:
                     knee_ang = m.get("knee_angle", 180)
-                    phase = "down" if knee_ang < 100 else "up"
-                    frame_buffer.append(knee_ang)
+
+                    # Apply exponential smoothing
+                    if USE_SMOOTHING:
+                        if knee_smooth is None or np.isnan(knee_smooth):
+                            knee_smooth = knee_ang
+                        else:
+                            knee_smooth = SMOOTH_ALPHA * knee_ang + (1 - SMOOTH_ALPHA) * knee_smooth
+                        knee_to_use = knee_smooth
+                    else:
+                        knee_to_use = knee_ang
+
+                    phase = "down" if knee_to_use < 100 else "up"
+                    frame_buffer.append(knee_to_use)
                     smoothed = np.mean(frame_buffer[-5:])
                     if not rep_started and smoothed < DEPTH_TARGET:
                         rep_started = True
@@ -638,7 +654,6 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
                         rep_started = False
 
                 elif exercise in ["lunge", "step-ups", "glute bridge", "bird-dog"]:
-                    
                     rep += 1
                     phase = "hold"
 
@@ -669,6 +684,9 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
                 cv2.putText(portrait, f"Form Score: {score}/100", (30, 180),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0) if score >= 80 else (0,0,255), 2)
 
+            else:
+                phase = "unknown"
+
             cv2.putText(portrait, f"{exercise.capitalize()} Set {set_count+1}/{sets} Rep/Hold: {rep}/{reps_per_set}",
                         (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,255), 2)
             cv2.imshow("AI Trainer", portrait)
@@ -686,9 +704,6 @@ def run_exercise_session(exercise, sets, reps_per_set, break_time=60):
         set_count += 1
         if set_count < sets:
             show_break_timer(break_time)
-
-
-
 
 
 # ============================

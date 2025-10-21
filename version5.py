@@ -241,6 +241,19 @@ def estimate_orientation(landmarks):
     z_diff = abs(ls.z - rs.z)
     return "front" if z_diff < 0.15 else "side"
 
+def show_break_timer(duration):
+    start_time = time.time()
+    while time.time() - start_time < duration:
+        remaining = duration - int(time.time() - start_time)
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(frame, f"Break Time: {remaining}s", (150, 240),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3)
+        cv2.imshow("Break", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyWindow("Break")
+
+    
 # ============================
 # 6. METRIC EXTRACTION
 # ============================
