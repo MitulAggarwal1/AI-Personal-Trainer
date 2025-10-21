@@ -1,3 +1,6 @@
 venv/
 trainer_envtrainer_env/
 .venv/
+session_log.csv
+session_log1.csv
+performance_knee_angle.png

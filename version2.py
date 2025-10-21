@@ -79,7 +79,8 @@ with mp_holistic.Holistic(
             mp_drawing_styles.get_default_pose_landmarks_style())
 
         # Check form
-        check_squat_form(results.pose_landmarks.landmark, frame, injury_type)
+        if results.pose_landmarks:
+            check_squat_form(results.pose_landmarks.landmark, frame, injury_type)
 
         # UI overlay
         cv2.putText(frame, "AI Personal Trainer", (30, 40),
